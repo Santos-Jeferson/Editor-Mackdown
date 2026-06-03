@@ -103,10 +103,6 @@ Ou utilize a extensão **Live Server** no VS Code.
 ---
 
 ## 👨‍💻 Autor
-
-
-Desenvolvido por Jhefferson.
-
 Desenvolvido por Jeferson.
 
 Projeto criado para estudos, evolução técnica e portfólio front-end.

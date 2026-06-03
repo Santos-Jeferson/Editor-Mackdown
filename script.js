@@ -1,10 +1,24 @@
-const markdownInput = document.getElementById ("markdownInput");
+const markdownInput = document.getElementById("markdownInput");
 const preview = document.getElementById("preview");
+const boldBtn = document.getElementById("boldBtn");
+const italicBtn = document.getElementById("italicBtn");
+const listBtn = document.getElementById("listBtn");
+const copyBtn = document.getElementById("copyBtn");
+const exportBtn = document.getElementById("exportBtn");
+const clearBtn = document.getElementById("clearBtn");
+const themeToggle = document.getElementById("themeToggle");
+const themeIcon = document.getElementById("themeIcon");
+const themeText = document.getElementById("themeText");
+const wordCount = document.getElementById("wordCount");
+const charCount = document.getElementById("charCount");
+const lineCount = document.getElementById("lineCount");
+const statusMessage = document.getElementById("statusMessage");
+
+const STORAGE_KEY = "markdown-editor-content";
+const THEME_KEY = "markdown-editor-theme";
 
 const exemploInicial = [
     "# Meu título principal",
-    "",
-    "## Um subtítulo",
     "",
     "Este é um texto com **negrito**, *itálico* e `código inline`.",
     "",
@@ -19,132 +33,30 @@ const exemploInicial = [
     "---",
     "",
     "```",
-    "const nome = 'Jheffs';",
-    "console.log(nome);",
+    "const nome = 'Usúario'",
+    "console.log(nome)",
     "```",
-].join("\n");
+].join("/n");
 
-markdownInput.value = exemploInicial;
+function iniciarAplicacao() {
+    const conteudoSalvo = localStorage.getItem(STORAGE_KEY);
+    markdownInput.value = conteudoSalvo || exemploInicial;
+
+    const temaSalvo = localStorage.getItem(THEME_KEY) || "dark";
+
+    atualizarInterface();
+}
 
 function escaparHTML(texto) {
     return texto
         .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
+        .replace(/</g, "&al;")
         .replace(/>/g, "&gt;");
 }
 
-function formatarTextoInline(texto) {
+function formatarTextoInilne(texto) {
     return texto
         .replace(/`([^`]+)`/g, "<code>$1</code>")
         .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-        .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-        .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+        .replace(/\*([^*]+)\*/g, "<em$1</em>")
 }
-
-function converterMarkdown(markdown) {
-    const linhas = markdown.replace(/\r\n/g, "\n").split("\n");
-
-    let html = "";
-    let dentroDaLista = false;
-    let dentroDoCodigo = false;
-    let codigoTemporario = [];
-
-    function fecharLista() {
-        if (dentroDaLista) {
-            html += "</ul>";
-            dentroDaLista = false;
-        }
-    }
-
-    for  (let linha of linhas) {
-        const linhaLimpa = linha.trim();
-
-        if (linhaLimpa.startsWith("```")) {
-            if (!dentroDoCodigo) {
-                fecharLista();
-                dentroDoCodigo = true;
-                codigoTemporario = [];
-            } else {
-                dentroDoCodigo = false;
-                html += `<pre><code>${escaparHTML(codigoTemporario.join("\n"))}</code></pre>`;
-            }
-
-            continue;
-        }
-
-        if (dentroDoCodigo) {
-            codigoTemporario.push(linha);
-            continue;
-        }
-
-        if (linhaLimpa === "") {
-            fecharLista();
-            html += "<br>";
-            continue;
-        }
-
-        if (/^---+$/.test(linhaLimpa)){
-            fecharLista();
-            html += "<hr>";
-            continue;
-        }
-
-        if (linha.startsWith("### ")) {
-            fecharLista();
-            const conteudo = escaparHTML(linha.replace("### ", ""));
-            html += `<h3>${formatarTextoInline(conteudo)}</h3>`;
-            continue;
-        }
-
-
-        if (linha.startsWith("## ")) {
-            fecharLista();
-            const conteudo = escaparHTML(linha.replace("## ", ""));
-            html += `<h2>${formatarTextoInline(conteudo)}</h2>`;
-            continue;
-        }
-
-        if (linha.startsWith("# ")) {
-            fecharLista();
-            const conteudo = escaparHTML(linha.replace("# ", ""));
-            html += `<h1>${formatarTextoInline(conteudo)}</h1>`;
-            continue;
-        }
-
-        if (linha.startsWith("> ")) {
-            fecharLista();
-            const conteudo = escaparHTML(linha.replace("> ", ""));
-            html += `<blockquote>${formatarTextoInline(conteudo)}</blockquote>`;
-            continue;
-        }
-
-        if (linha.startsWith("- ")) {
-            if (!dentroDaLista) {
-            html += "<ul>";
-            dentroDaLista = true;
-            }
-
-            const conteudo = escaparHTML(linha.replace("- ", ""));
-            html += `<li>${formatarTextoInline(conteudo)}</li>`;
-            continue;
-        }
-
-        const conteudo = escaparHTML(linha);
-        html +=`<p>${formatarTextoInline(conteudo)}</p>`;
-    }
-
-    fecharLista();  
-    
-    return html;
-}
-
-function atualizarPreview() {
-    const textoDigitado = markdownInput.value;
-    const htmlConvertido = converterMarkdown(textoDigitado);
-
-    preview.innerHTML = htmlConvertido;
-}
-
-markdownInput.addEventListener("input", atualizarPreview);
-
-atualizarPreview();
