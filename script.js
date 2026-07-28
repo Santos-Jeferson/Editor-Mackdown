@@ -60,3 +60,43 @@ const STORAGE_KEYS = {
     view: "markdown-editor-pro-view",
     versions: "markdown-editor-pro-versions"
 }; 
+
+// =============================
+// 3. Texto inicial do projeto
+// =============================
+// Array de linhas unido com \n para formar um texto multilinha.
+const EXEMPLO_INICIAL = [
+    "# Editor de Markdown PRO",
+    "",
+    "# Recursos principais",
+    "",
+    "Este editor tem **preview ao vivo**, *tema personalizável* e `atalhos de teclado`.",
+    "",
+    "- Botões de formação rápida",
+    "- Copiar e exportar Markdown",
+    "- Importar arquivo .md",
+    "- Salvar automaticamente no navegador",
+    "",
+    "## Lista de tarefas",
+    "",
+    "[X] Criar HTML semântico",
+    "[X] Estilizar com CSS moderno",
+    "[ ] Publicar no GitHub",
+    "", 
+    "> Dica: use Ctrl+B para negrito, Ctrl+I para itálico e Ctrl+k para link.",
+    "",
+    "## Tabela",
+    "",
+    "| Recurso | Status |",
+    "| --- | --- |",
+    "| Preview ao vivo | Pronto |",
+    "| Exportar .md | Pronto |",
+    "| Tema dark/light | Pronto |",
+    "",
+    "---",
+    "",
+    "```js",
+    "const nome = 'Jheffs';",
+    "console.log(`Olá, ${nome}!`);",
+    "---", 
+].join("\n"); 
