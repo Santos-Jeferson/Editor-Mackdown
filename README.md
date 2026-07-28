@@ -52,9 +52,6 @@ editor-markdown/
 ├── style.css
 ├── script.js
 ├── README.md
-│
-└── docs/
-    └── guia-editor-markdown.pdf
 ```
 
 ---
@@ -64,7 +61,7 @@ editor-markdown/
 Adicione aqui prints do projeto 👇
 
 ```md
-![Preview do projeto](./assets/preview.png)
+![Preview do projeto]()
 ```
 
 ---
@@ -74,7 +71,7 @@ Adicione aqui prints do projeto 👇
 1. Clone o repositório
 
 ```bash
-git clone SEU-LINK-AQUI
+git clone https://github.com/Santos-Jeferson/Editor-Mackdown
 ```
 
 2. Abra a pasta do projeto
