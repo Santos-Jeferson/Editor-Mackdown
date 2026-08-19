@@ -58,10 +58,10 @@ editor-markdown/
 
 ## 🎨 Preview
 
-Adicione aqui prints do projeto 👇
+
 
 ```md
-![Preview do projeto]()
+
 ```
 
 ---
