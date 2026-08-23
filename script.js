@@ -100,3 +100,70 @@ const EXEMPLO_INICIAL = [
     "console.log(`Olá, ${nome}!`);",
     "---", 
 ].join("\n"); 
+// Teplates prontos ajudam o usuário a começar documentos comuns.
+const TEMPLATES ={
+    README: [
+        "# Nome do Projeto",
+        "",
+        "Descrição curta do projeto e do problema que ele resolve.",
+        "",
+        "## Funcionalidades",
+        "",
+        "- Recurso 1",
+        "- Recurso 2",
+        "- Recurso 3",
+        "",
+        "- HTML",
+        "- CSS",
+        "- JavaScript",
+        "",
+        "## Como executar",
+        "",
+        "```bash",
+        "Abra o index.html no navegador",
+        "```",
+    ].join("\n"),
+
+    documentacao: [
+        "# Documentação Técnica",
+        "",
+        "## Objetivo",
+        "",
+        "Explique o objetivo deste documento.",
+        "",
+        "## Como funciona",
+        "",
+        "1. Primeiro passo",
+        "2. Segundo passo",
+        "3. Terceiro passo",
+        "",
+        "## Exemoplo de código",
+        "",
+        "```js",
+        "function exemplo() {",
+        "   return 'funcionando';",
+        "}",
+        "```", 
+    ].join("\n"),
+    
+    artgo: [
+    "Título do Artigo",
+    "",
+    "## Introdução",
+    "",
+    "Apresente o tema e o contexto.",
+    "",
+    "## Desenvolvimento",
+    "",
+    "Explique os pontos principais com clareza.",
+    "",
+    "## Conclusão",
+    "",
+    "Finalize retornando a ideia central.",
+    ].join("\n")
+};
+
+//Pequena variavél para reaproveirar o último HTML convertido.
+let ultimoHtmlConvertido = "";
+let timerSalvamento = null;
+let sincronizandoScroll = false;
