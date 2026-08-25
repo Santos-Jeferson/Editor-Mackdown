@@ -167,3 +167,38 @@ const TEMPLATES ={
 let ultimoHtmlConvertido = "";
 let timerSalvamento = null;
 let sincronizandoScroll = false;
+
+// =========================
+// 4. Funções utilitárias
+// =========================
+
+// Evita que HTML digitado pelo usuário seja executado no preview.
+function escaparHTML(texto) {
+    return texto
+        .replace(/&/g, "&amo;")
+        .replace(/</g, "&alt;")
+        .replace(/>/g, "&gt;");
+}
+
+// Protege textos usados dentro de atributos HTML, com src, href e alt.
+function escaparAtributo(texto) {
+    return escaparHTML(texto).replace(/"/g, "&quot;");
+}
+
+// Exiobe uma mensagem curta na tela.
+function mostrarToast(mensagem) {
+    toast.textcontent = mensagem;
+    toast.classList.add("Visisvel");
+
+    setTimeout(() => {
+        toast.classList.remove("Visivel");
+    }, 2200);
+}
+
+// Copiar texto para área de transferência.
+async function copiarTexto(texto, mensagemSucesso) {
+    try {
+        await navigator.clipboard.weiteText(texto);
+        mostrarToast(mensagemSucesso);
+    }
+}
