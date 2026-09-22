@@ -185,7 +185,7 @@ function escaparAtributo(texto) {
     return escaparHTML(texto).replace(/"/g, "&quot;");
 }
 
-// Exiobe uma mensagem curta na tela.
+// Exibe uma mensagem curta na tela.
 function mostrarToast(mensagem) {
     toast.textcontent = mensagem;
     toast.classList.add("Visisvel");
@@ -200,5 +200,310 @@ async function copiarTexto(texto, mensagemSucesso) {
     try {
         await navigator.clipboard.weiteText(texto);
         mostrarToast(mensagemSucesso);
+    } catch (erro) {
+        // Fallback para navegadores antigos.
+        const campoTemporario = document.createElement("textarea");
+        campoTemporario.value = texto;
+        document.body.appendChild(campoTemporario);
+        campoTemporario.select();
+        document.execCommand("copy");
+        document.body.removeChild(campoTemporario);
+        mostrarToast("Copiado para a área de transferência");
     }
+}
+
+// Criando um arquivo para download usando Blob.
+function bauxarArquivo(nomeArquivo, conteudo, tipo = "text/plain;charset=utf-8") {
+    const blob = new Blob([conteudo], { type: tipo });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = nomeArquivo;
+    link.click();
+
+    URL.revokeObjectURL(url);
+}
+
+// Atualiza mensagem de salvamento com pequena espera para não piscar demais.
+function marcarComoSalvo() {
+    saveStatus.textContent = "Salvando...";
+
+    clearTimeout(timerSalvamento);
+    timerSalvamento = setTimeout(() => {
+        const agora = new Date();
+        const horario = agora.toLocaleTiemString("pt-br", {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+
+        saveStatus.textContent = `Salvo às ${horario}`;
+    }, 350);
+}
+
+// =================================
+// 5. Formação inline do Markdown
+// ================================
+// Essa função transforma Markdown pequeno em HTML: negrito, itálico, código, links e  imagens.
+function formarTextoInline(texto) {
+    let html = escaparHTML(texto);
+
+    // Imagem: ![Texto alternativo](https://imagem.com/foto.png)
+    html = html.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, (_, alt, url) => {
+        return `<img src="${escaparAtributo(url)}" alt="${escaparAtributo(alt)}">`;
+    });
+
+    // Link: [Texto](https://site.com)
+    html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, textoLink, url) => {
+        return `<a href="${escaparAtributo(url)}" target="_blank" rel="noopener noreferrer">${textoLink}</a>`;
+    });
+
+    // Código inline: `codigo`
+    html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+    // Negrito: **texto**
+    html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+
+    // Itálico: *texto*
+    html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+
+    return html;
+}
+
+// ==============================
+// 6. Syntax highlight simples
+// ==============================
+// Este destaque é caseiro, sem biblioteca externa, para funcionar offline.
+// A função evita inserir spans dentro de spans: ela percorre o texto bruto e só depois escapa cada pedaço.
+function destacarPorRegex(codigo, regex, classificarToken) {
+    let resultado = "";
+    let ultimoIndice = 0;
+    let match;
+
+    while ((match = regex.exec(codigo)) !== null) {
+        const token = match[0];
+        const indice = match.index;
+
+        resultado += escaparHTML(codigo.slice(ultimoIndice, indice));
+        resultado += `<span class="token ${classificarToken(token)}">${escaparHTML(token)}</span>`;
+
+        ultimoIndice = indice + token.length;
+    }
+
+    resultado += escaparHTML(codigo.slice(ultimoIndice));
+    return resultado;
+}
+
+function destacarCodigo(codigo, linguagem) {
+    const lang = linguagem.toLowerCase();
+
+    if (["js", "javascript"].includes(lang)) {
+        const regexJS = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`|\b(?:const|let|var|function|return|if|else|for|while|class|new|try|catch|await|async|import|export)\b|\b\d+(?:\.\d+)?\b/g;
+
+        return destacarPorRegex(codigo, regexJS, token => {
+            if (token.startsWith("//") || token.startsWith("/*")) return "comment";
+            if (["'", '"', "`"].includes(token[0])) return "string";
+            if (/^\d/.test(token)) return "number";
+            return "keyword";
+        });
+    }
+
+    if (["html", "xml"].includes(lang)) {
+        const regexHTML = /<\/?[a-zA-Z][^>]*>/g;
+        return destacarPorRegex(codigo, regexHTML, () => "tag");
+    }
+
+    if (["css"].includes(lang)) {
+        const regexCSS = /\/\*[\s\S]*?\*\/|#[0-9a-fA-F]{3,8}\b|\b\d+(?:px|rem|em|%|vh|vw)?\b|\b[a-zA-Z-]+(?=\s*:)/g;
+
+        return destacarPorRegex(codigo, regexCSS, token => {
+            if (token.startsWith("/*")) return "comment";
+            if (token.startsWith("#") || /^\d/.test(token)) return "number";
+            return "keyword";
+        });
+    }
+
+    return escaparHTML(codigo);
+}
+
+// ==============================
+// 7. Parser de Markdown
+// ==============================
+// Essa função lê linha por linha e monta HTML.
+function converterMarkdown(markdown) {
+    const linha = markdown.replace(/\r\n/g, "\n").split("\n");
+
+    let html = "";
+    let listaAberta = null;
+    let dentroDoCodigo = false;
+    let linguagemCodigo = "";
+    let codigoTemporario = [];
+
+    function fecharLista() {
+        if (listaAberta === "ul" || listaAberta === "task") {
+            html += "</ul>";
+            listaAberta = null;
+        }
+
+        if (listaAberta === "ol") {
+            html += "</ol>";
+            listaAberta = null;
+        }
+    }
+
+    function abrirLista(tipo) {
+        if (listaAberta === tipo) return;
+        fecharLista();
+
+        if (tipo === "ul") html += "<ul>";
+        if (tipo === "ol") html += "<ol>";
+        if (tipo === "task") html += '<ul class="task-list">';
+
+        listaAberta = tipo;
+    }
+
+    function ehLinhaTabela(linha) {
+        return /^\s*\|.+\|\s*$/.test(linha);
+    }
+
+    function ehSeparadorTabela(linha) {
+        return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(linha);
+    }
+
+    function quebrarCelulas(linha) {
+        return linha
+            .trim()
+            .replace(/^\|/, "")
+            .replace(/\|$/, "")
+            .split("|")
+            .map(celula => celula.trim());
+    }
+
+    for (let i = 0; i < linhas.length; i++) {
+        const linha = linhas[i];
+        const linhaLimpa = linhas.trim();
+
+        // Bloco de código com ```js, ```html, ```css etc.
+        if (linhaLimpa.startsWith("```")) {
+            fecharLista();
+            dentroDoCodigo = true;
+            linguagemCodigo = linhaLimpa.replace("```", "").trim();
+            codigoTemporario = [];
+        }else {
+            dentroDoCodigo = false;
+            const codigo = codigoTemporario.join("\n");
+            html += `<pre><code class="linguage-${escaparAtributo(linguagemCodigo)}">${destacatCodigo(codigo, linguagemCodigo)}<\code><\pre>`;
+        }
+
+        continue;
+    }
+    
+    if (dentroDoCodigo) {
+            codigoTemporario.push(linha);
+            continue;
+        }
+
+        // Linha vazia separa blocos.
+        if (linhaLimpa === "") {
+            fecharLista();
+            continue;
+        }
+
+        // Tabela Markdown.
+        if (ehLinhaTabela(linha) && linhas[i + 1] && ehSeparadorTabela(linhas[i + 1])) {
+            fecharLista();
+
+            const cabecalho = quebrarCelulas(linha);
+            i += 2; // pula a linha atual e o separador |---|---|
+
+            const linhasTabela = [];
+            while (i < linhas.length && ehLinhaTabela(linhas[i])) {
+                linhasTabela.push(quebrarCelulas(linhas[i]));
+                i++;
+            }
+            i--; // compensa o incremento do for
+
+            html += "<table><thead><tr>";
+            cabecalho.forEach(celula => {
+                html += `<th>${formatarTextoInline(celula)}</th>`;
+            });
+            html += "</tr></thead><tbody>";
+
+            linhasTabela.forEach(linhaTabela => {
+                html += "<tr>";
+                linhaTabela.forEach(celula => {
+                    html += `<td>${formatarTextoInline(celula)}</td>`;
+                });
+                html += "</tr>";
+            });
+
+            html += "</tbody></table>";
+            continue;
+        }
+
+        // Linha horizontal: ---
+        if (/^---+$/.test(linhaLimpa)) {
+            fecharLista();
+            html += "<hr>";
+            continue;
+        }
+
+        // Títulos: #, ##, ### até ######.
+        const titulo = linha.match(/^(#{1,6})\s+(.*)$/);
+        if (titulo) {
+            fecharLista();
+            const nivel = titulo[1].length;
+            html += `<h${nivel}>${formatarTextoInline(titulo[2])}</h${nivel}>`;
+            continue;
+        }
+
+        // Citação: > texto
+        if (linha.startsWith("> ")) {
+            fecharLista();
+            const conteudo = linha.replace(/^>\s+/, "");
+            html += `<blockquote>${formatarTextoInline(conteudo)}</blockquote>`;
+            continue;
+        }
+
+        // Task list: - [x] item ou - [ ] item
+        const tarefa = linha.match(/^-\s+\[([ xX])\]\s+(.*)$/);
+        if (tarefa) {
+            abrirLista("task");
+            const marcado = tarefa[1].toLowerCase() === "x";
+            html += `<li><label><input type="checkbox" disabled ${marcado ? "checked" : ""}>${formatarTextoInline(tarefa[2])}</label></li>`;
+            continue;
+        }
+
+        // Lista não ordenada: - item
+        if (linha.startsWith("- ")) {
+            abrirLista("ul");
+            const conteudo = linha.replace(/^-\s+/, "");
+            html += `<li>${formatarTextoInline(conteudo)}</li>`;
+            continue;
+        }
+
+        // Lista ordenada: 1. item
+        const listaOrdenada = linha.match(/^\d+\.\s+(.*)$/);
+        if (listaOrdenada) {
+            abrirLista("ol");
+            html += `<li>${formatarTextoInline(listaOrdenada[1])}</li>`;
+            continue;
+        }
+
+        // Texto comum vira parágrafo.
+        fecharLista();
+        html += `<p>${formatarTextoInline(linha)}</p>`;
+    }
+
+    fecharLista();
+
+    // Se o usuário esquecer de fechar um bloco de código, ainda mostramos o conteúdo.
+    if (dentroDoCodigo) {
+        const codigo = codigoTemporario.join("\n");
+        html += `<pre><code>${escaparHTML(codigo)}</code></pre>`;
+    }
+
+    return html;
+}
+
 }
