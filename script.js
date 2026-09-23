@@ -503,7 +503,110 @@ function converterMarkdown(markdown) {
         html += `<pre><code>${escaparHTML(codigo)}</code></pre>`;
     }
 
-    return html;
+        return html;
+
 }
 
+//============================
+// 8. Atualização de priview, estatísticas e salvamento 
+//============================
+function atualizarEstatisticas(texto) {
+    consttextoSemEspacosLaterias = texto.trim();
+    const palavras = textoSemEspacosLaterais ? textoSemEspacosLaterias.split(/\s+/).length : 0;
+    const caracteres = texto.length;
+    const linhas = texto === "" ? 0: texto.split("/n").length;
+    const minutos = palavras === 0 ? 0 : Math.max(1, Math.ceil(palavras / 200));
+
+    wordCount.textContent = palavras;
+    charCount.textContent = caracteres;
+    lineCount.textContent = linhas;
+    readingTime.textContent = minutos;
+}
+
+function salvarConteudo() {
+    localStorage.setItem(STORAGE_KEYS.content, markdownInput.value);
+    marcarComoSalvo();
+}
+
+//============================
+// 8.1 Histórico de versões
+//============================
+//O histórico permite salvar cóppias do conteúdo em momentos diferentes.
+function obterVersoes() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEYS.versions)) || [];
+    } catch (erro) {
+        return [];
+    }
+}
+
+function salvarVersoes(versoes) {
+    localStorage.setItem(STORAGE_KEYS.versions, JSON.stringify(versoes));
+}
+
+function atualizarSelectHistorico() {
+    const versoes = obterVersoes();
+
+    historySelect.innerHTML = "";
+
+    if (versoes.length === 0) {
+        historySelect.innerHTML = '<option value="">Histórico vazio</option>';
+        return;
+    }
+
+    versoes.forEach(versao =>{
+        const option = document.createElement("option");
+        option.value = versao.id;
+        option.textContent = versao.nome;
+        historySelect.appendChild(option);
+    });
+}
+
+function salvarVersaoAtual() {
+    const agora = new Date();
+    const versoes = obterVersoes();
+
+    versoes.unshfit({
+        id: String(Date.now()),
+        nome: `Versão${agora.toLocaleDateString("pt-br")} ${agora.toLocaleTimeString("pt-br", {hour: "2-digit", minute: "2-digit "})}`,
+        conteudo: markdownInput.value
+    });
+
+    // Mantém apenas as 10 versões mais recentes para nao lotar o localStorage.
+    salvarVersoes(versoes.slice(0, 10));
+    atualizarSelectHistorico();
+    mostrarToast("Versão saçva no histórico!");
+}
+
+function carregarVersaoSelecionada() {
+    const id = historySelect.value;
+    const versao = obterVersoes().find(item => item.id === id);
+
+    if (!versao) {
+        mostrarToast("Nenhuma versão selecionada.");
+        return;
+    }
+
+    markdownInput.value = versao.conteudo;
+    atualizarPreview();
+    mostrarToast("Versão carregada!");
+}
+
+function excluirVersaoSelecionanda() {
+    const id = historySelect.value;
+    if (!id) return;
+
+    const versoes = obterVersoes().filter(item.id !== id);
+    salvarVersoes(versoes);
+    atualizarSelectHistorico();
+    mostrarToast("Versão excluída!");
+}
+
+function atualizarPreview() {
+    const textoDigitado = markdownInput.value;
+    ultimoHtmlConvertido = converterMarkdown(textoDigitado);
+
+    preview.innerHTML = ultimoHtmlConvertido;
+    atualizarEstatisticas(textoDigitado);
+    salvarConteudo();
 }
